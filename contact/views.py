@@ -1,46 +1,46 @@
-from rest_framework.decorators import api_view
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.core.mail import send_mail
-from django.conf import settings
+from rest_framework import status
+import threading
+from .zoho_mail import send_zoho_mail
 
-@api_view(['POST'])
-def contact_api(request):
-    name = request.data.get('name')
-    email = request.data.get('email')
-    company = request.data.get('company', '')
-    service = request.data.get('service', '')
-    message = request.data.get('message')
 
-    if not name or not email or not message:
-        return Response(
-            {"error": "Name, email and message are required"},
-            status=400
-        )
-
-    body = f"""
-New Contact Request
-
+def send_contact_email(name, email, company, message):
+    content = f"""
 Name: {name}
 Email: {email}
 Company: {company}
-Service: {service}
 
 Message:
 {message}
 """
+    send_zoho_mail(
+        subject=f"New Contact Inquiry from {name}",
+        content=content,
+        to_email="syedkareemmynudeen@manovate.co.in",
+    )
 
-    try:
-        send_mail(
-            subject="New Portfolio Contact",
-            message=body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=["santhoshsandy@manovate.co.in"],
-            fail_silently=False,
-        )
-    except Exception as e:
+
+class ContactAPIView(APIView):
+    def post(self, request):
+        name = request.data.get("name")
+        email = request.data.get("email")
+        company = request.data.get("company")
+        message = request.data.get("message")
+
+        if not name or not email or not message:
+            return Response(
+                {"error": "Required fields missing"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        threading.Thread(
+            target=send_contact_email,
+            args=(name, email, company, message),
+            daemon=True,
+        ).start()
+
         return Response(
-            {"error": f"Email failed: {str(e)}"},
-            status=500
+            {"success": True, "message": "Contact request received"},
+            status=status.HTTP_201_CREATED,
         )
-
-    return Response({"success": "Email sent successfully"})

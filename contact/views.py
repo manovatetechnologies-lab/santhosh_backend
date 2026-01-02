@@ -17,7 +17,7 @@ Message:
     send_zoho_mail(
         subject=f"New Contact Inquiry from {name}",
         content=content,
-        to_email="syedkareemmynudeen@manovate.co.in",
+        to_email="santhoshsandy@manovate.co.in",
     )
 
 
